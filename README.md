@@ -59,7 +59,7 @@ mise-group names                 # グループ名だけ（スクリプト用）
 グループ定義は dotfiles 側に置き、ツールだけをこのリポジトリから入れる、という分担ができる。作者の dotfiles では：
 
 - `mise/groups/*.toml`（定義）を `~/.config/mise/groups` にリンク
-- `install.sh` がこのリポジトリを clone して `mise-group` を導入
+- dotfiles の base ツールに `"github:Q0tzly/mise-group"` が入っていて、mise が本体を配る（初回構築時だけ install.sh が `mise exec` で先行して借りる）
 
 という形で使っている。
 
