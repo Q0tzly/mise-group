@@ -1,26 +1,28 @@
 # mise-group
 
-[mise](https://mise.jdx.dev) のツールを「グループ」単位で有効／無効にする小さな CLI。
+English | [日本語](README.ja.md)
+
+A small CLI to enable and disable [mise](https://mise.jdx.dev) tools by group.
 
 > Unofficial companion CLI for mise. Not affiliated with the mise project.
 
-mise 本体には「ファイルに残しておくけど今はインストールしないツール置き場」が無い。`mise.toml` や `conf.d/` に書けば `mise install` で入ってしまうし、消せば候補だったこと自体を忘れる。mise-group はその間を担う：
+mise itself has no place for "tools I want to keep on file but not install right now". Write a tool in `mise.toml` or `conf.d/` and `mise install` installs it; delete it and you forget it was ever a candidate. mise-group covers the gap in between:
 
-- グループ定義（`[tools]` の TOML）は**カタログ**としてグループ用ディレクトリに置いておく
-- 有効化は `~/.config/mise/conf.d/<グループ名>.toml` へのシンボリックリンクの有無だけ
-- 状態ファイルは持たない。リンクが正（canonical）なので、リンクを手で作ったり消したりしても壊れない
+- Group definitions (TOML files with a `[tools]` section) live in a groups directory as a **catalog**
+- A group is enabled solely by the presence of a symlink at `~/.config/mise/conf.d/<name>.toml`
+- There is no state file. The links are canonical, so creating or removing them by hand never breaks anything
 
-もともと作者の dotfiles の中の一スクリプトだったものを、独立リポジトリに切り出した。
+It started as a script in the author's dotfiles and was extracted into its own repository.
 
-## セットアップ
+## Setup
 
-推奨は mise 自身で入れる方法（バージョン管理とアップグレードも mise が担う）：
+The recommended way is to let mise itself install it (mise then handles versioning and upgrades):
 
 ```sh
 mise use -g "github:Q0tzly/mise-group@latest"
 ```
 
-mise を介さない場合は、リリースバイナリを `~/.local/bin` に入れる install.sh もある：
+Alternatively, `install.sh` installs the release binary into `~/.local/bin` without going through mise:
 
 ```sh
 git clone https://github.com/Q0tzly/mise-group.git
@@ -28,12 +30,12 @@ cd mise-group
 ./install.sh
 ```
 
-- グループ用ディレクトリ `~/.config/mise/groups/` を用意（無ければ作る）
-- 実装は Go（標準ライブラリのみ、静的バイナリ）。v0.1 は bash 版だった
+- It creates the groups directory `~/.config/mise/groups/` if needed
+- Implemented in Go (standard library only, static binary). v0.1 was a bash version
 
-## 使い方
+## Usage
 
-グループは `[tools]` を書いた TOML ファイル。`examples/groups/` に例がある。
+A group is a TOML file with a `[tools]` section. See `examples/groups/` for an example.
 
 ```toml
 # ~/.config/mise/groups/media.toml
@@ -42,38 +44,39 @@ ffmpeg = "latest"
 ```
 
 ```sh
-mise-group list                  # 一覧（[x] が有効）
-mise-group enable media          # 有効化して mise install
-mise-group enable --no-install media  # リンクだけ作る
-mise-group disable media         # 無効化して、そのグループ固有のツールを削除
-mise-group names                 # グループ名だけ（スクリプト用）
+mise-group list                  # list groups ([x] = enabled)
+mise-group enable media          # enable and run mise install
+mise-group enable --no-install media  # just create the link
+mise-group disable media         # disable and remove tools unique to that group
+mise-group names                 # group names only (for scripts)
 ```
 
-- `disable` は、他の有効な設定にも載っているツールは消さない
-- グループ用ディレクトリの場所は環境変数で変えられる：
-  - `MISE_GROUPS_DIR`: グループ定義の置き場。既定は `~/.config/mise/groups`。ただしスクリプトの隣に `<repo>/mise/groups` がある配置（dotfiles に同梱する旧レイアウト）ではそちらが優先される
-  - `MISE_CONF_D`: リンク先。既定は `~/.config/mise/conf.d`
+- `disable` never removes tools that also appear in other still-enabled configs
+- The directories can be changed with environment variables:
+  - `MISE_GROUPS_DIR`: where group definitions live. Default is `~/.config/mise/groups`. If a `<repo>/mise/groups` directory exists two levels above the executable (the legacy layout from when it shipped inside dotfiles), that takes precedence
+  - `MISE_CONF_D`: where the links go. Default is `~/.config/mise/conf.d`
 
-## dotfiles と組み合わせる場合
+## Using it with dotfiles
 
-グループ定義は dotfiles 側に置き、ツールだけをこのリポジトリから入れる、という分担ができる。作者の dotfiles では：
+Group definitions can live in your dotfiles while the tool itself comes from this repository.
 
-- `mise/groups/*.toml`（定義）を `~/.config/mise/groups` にリンク
-- dotfiles の base ツールに `"github:Q0tzly/mise-group"` が入っていて、mise が本体を配る（初回構築時だけ install.sh が `mise exec` で先行して借りる）
+The author's dotfiles are a working reference:
 
-という形で使っている。
+- [Q0tzly/dotfiles](https://github.com/Q0tzly/dotfiles) — the group definitions live in [`mise/groups/`](https://github.com/Q0tzly/dotfiles/tree/main/mise/groups) (11 groups)
+- Those definitions are linked to `~/.config/mise/groups`
+- The dotfiles' base tools include `"github:Q0tzly/mise-group"`, so mise distributes the binary itself (on first-time setup only, install.sh borrows it ahead of time via `mise exec`)
 
-## テスト
+## Tests
 
 ```sh
-tests/run.sh   # バイナリをビルドし、スタブの mise で挙動を検証。本物には触らない
+tests/run.sh   # builds the binary and verifies behavior against a stub mise; never touches a real one
 go vet ./...
 ```
 
-リリースはタグ（`v*`）を push すると GitHub Actions が4ターゲット
-（darwin/linux × arm64/amd64）を1台のランナーからクロスビルドして
-GitHub Releases に上げる。
+Releases: pushing a tag (`v*`) makes GitHub Actions cross-build four targets
+(darwin/linux × arm64/amd64) from a single runner and upload them to
+GitHub Releases.
 
-## ライセンス
+## License
 
-Apache License 2.0（`LICENSE` 参照）
+Apache License 2.0 (see `LICENSE`)
