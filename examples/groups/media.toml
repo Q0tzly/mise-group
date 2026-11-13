@@ -1,0 +1,4 @@
+# Example group: copy files like this into your groups directory
+# (~/.config/mise/groups by default) and run `mise-group enable media`.
+[tools]
+ffmpeg = "latest"
