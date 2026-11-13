@@ -1,0 +1,52 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Test
+        run: tests/run.sh
+      - name: Build all targets
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          # goos goarch triple (asset names mirror the Rust-style triples
+          # that mise's github backend already understands)
+          targets="
+            darwin arm64 aarch64-apple-darwin
+            darwin amd64 x86_64-apple-darwin
+            linux arm64 aarch64-unknown-linux-gnu
+            linux amd64 x86_64-unknown-linux-gnu
+          "
+          echo "$targets" | while read -r goos goarch triple; do
+            [ -n "$goos" ] || continue
+            name="mise-group-$TAG-$triple"
+            mkdir -p "dist/$name"
+            CGO_ENABLED=0 GOOS="$goos" GOARCH="$goarch" \
+              go build -trimpath -ldflags "-X main.version=$TAG" \
+              -o "dist/$name/mise-group" ./cmd/mise-group
+            cp LICENSE README.md "dist/$name/"
+            tar czf "dist/$name.tar.gz" -C dist "$name"
+            rm -rf "dist/$name"
+          done
+          (cd dist && sha256sum *.tar.gz > checksums.txt)
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.tar.gz
+            dist/checksums.txt
+          generate_release_notes: true

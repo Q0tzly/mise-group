@@ -1,13 +1,15 @@
 #!/bin/bash
-# Tests for bin/mise-group. Uses a stub `mise` on PATH; the real mise and
-# the real ~/.config/mise are never touched (MISE_GROUPS_DIR / MISE_CONF_D
-# point at a temp dir). Run: tests/run.sh
+# Tests for the mise-group binary (built from cmd/mise-group). Uses a stub
+# `mise` on PATH; the real mise and the real ~/.config/mise are never
+# touched (MISE_GROUPS_DIR / MISE_CONF_D point at a temp dir).
+# Run: tests/run.sh
 set -u
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-MG="$ROOT/bin/mise-group"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
+MG="$TMP/mise-group"
+(cd "$ROOT" && go build -o "$MG" ./cmd/mise-group) || { echo "build failed" >&2; exit 1; }
 
 export MISE_GROUPS_DIR="$TMP/groups"
 export MISE_CONF_D="$TMP/conf.d"
@@ -105,6 +107,9 @@ check "disable removes conf.d link" "no" "$r"
 out="$(MISE_GROUPS_DIR="$TMP/nonexistent" "$MG" list 2>&1)" && r=ok || r=error
 check "missing groups dir fails" "error" "$r"
 check_contains "missing groups dir message" "no groups directory" "$out"
+
+# version command works (value is "dev" outside release builds)
+check_contains "version" "mise-group " "$("$MG" version)"
 
 echo "---"
 echo "$pass passed, $fail failed"

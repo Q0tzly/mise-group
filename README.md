@@ -14,15 +14,22 @@ mise 本体には「ファイルに残しておくけど今はインストール
 
 ## セットアップ
 
+推奨は mise 自身で入れる方法（バージョン管理とアップグレードも mise が担う）：
+
+```sh
+mise use -g "github:Q0tzly/mise-group@latest"
+```
+
+mise を介さない場合は、リリースバイナリを `~/.local/bin` に入れる install.sh もある：
+
 ```sh
 git clone https://github.com/Q0tzly/mise-group.git
 cd mise-group
 ./install.sh
 ```
 
-- `bin/mise-group` → `~/.local/bin/mise-group` にリンク
 - グループ用ディレクトリ `~/.config/mise/groups/` を用意（無ければ作る）
-- 前提: mise 本体と bash（macOS の /bin/bash 3.2 でも動く）
+- 実装は Go（標準ライブラリのみ、静的バイナリ）。v0.1 は bash 版だった
 
 ## 使い方
 
@@ -59,8 +66,13 @@ mise-group names                 # グループ名だけ（スクリプト用）
 ## テスト
 
 ```sh
-tests/run.sh   # スタブの mise を使う。本物には触らない
+tests/run.sh   # バイナリをビルドし、スタブの mise で挙動を検証。本物には触らない
+go vet ./...
 ```
+
+リリースはタグ（`v*`）を push すると GitHub Actions が4ターゲット
+（darwin/linux × arm64/amd64）を1台のランナーからクロスビルドして
+GitHub Releases に上げる。
 
 ## ライセンス
 
