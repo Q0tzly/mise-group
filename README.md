@@ -52,7 +52,7 @@ mise-group names                 # group names only (for scripts)
 ```
 
 - `disable` never removes tools that also appear in other still-enabled configs
-- If two enabled groups pin **different versions of the same tool**, mise resolves the conflict itself: the version from the file whose name sorts last in `conf.d/` wins (`zzz.toml` beats `aaa.toml`), regardless of which version is newer, and mise gives no warning. Disabling the winning group then makes the other group's pin the requested version — nothing is uninstalled while another config still lists the tool, but if that version was never installed it shows as missing until the next `mise install`. Verified with mise 2026.11.5
+- If two enabled groups pin **different versions of the same tool**, mise resolves the conflict itself: the version from the file whose name sorts last in `conf.d/` wins (`zzz.toml` beats `aaa.toml`), regardless of which version is newer, and mise gives no warning. `mise-group enable` prints a warning when the group it enables creates such a conflict, but still enables it. Disabling the winning group then makes the other group's pin the requested version — nothing is uninstalled while another config still lists the tool, but if that version was never installed it shows as missing until the next `mise install`. Verified with mise 2026.11.5
 - The directories can be changed with environment variables:
   - `MISE_GROUPS_DIR`: where group definitions live. Default is `~/.config/mise/groups`. If a `<repo>/mise/groups` directory exists two levels above the executable (the legacy layout from when it shipped inside dotfiles), that takes precedence
   - `MISE_CONF_D`: where the links go. Default is `~/.config/mise/conf.d`

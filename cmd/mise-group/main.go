@@ -176,15 +176,24 @@ func allGroups() []string {
 
 var keyRe = regexp.MustCompile(`^("[^"]+"|[A-Za-z0-9_.:@\/-]+)\s*=`)
 
-// toolsOf returns the tool names declared under [tools], in file order.
-// Values may be strings ("latest") or tables ({ version = ... }); only
-// the keys matter here.
-func toolsOf(path string) []string {
+var (
+	stringValueRe  = regexp.MustCompile(`^"([^"]*)"`)
+	tableVersionRe = regexp.MustCompile(`\bversion\s*=\s*"([^"]*)"`)
+)
+
+type toolPin struct {
+	tool    string
+	version string // empty when the value has no comparable version
+}
+
+// toolPinsOf returns the [tools] entries of a group file, in file order.
+// Values may be strings ("latest") or inline tables ({ version = ... }).
+func toolPinsOf(path string) []toolPin {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil
 	}
-	var tools []string
+	var pins []toolPin
 	inTools := false
 	for _, line := range strings.Split(string(data), "\n") {
 		trimmed := strings.TrimSpace(line)
@@ -199,7 +208,29 @@ func toolsOf(path string) []string {
 		if m == nil {
 			continue
 		}
-		tools = append(tools, strings.Trim(m[1], `"`))
+		value := strings.TrimSpace(trimmed[len(m[0]):])
+		pins = append(pins, toolPin{tool: strings.Trim(m[1], `"`), version: pinVersion(value)})
+	}
+	return pins
+}
+
+func pinVersion(value string) string {
+	if m := stringValueRe.FindStringSubmatch(value); m != nil {
+		return m[1]
+	}
+	if strings.HasPrefix(value, "{") {
+		if m := tableVersionRe.FindStringSubmatch(value); m != nil {
+			return m[1]
+		}
+	}
+	return ""
+}
+
+// toolsOf returns the tool names declared under [tools], in file order.
+func toolsOf(path string) []string {
+	var tools []string
+	for _, p := range toolPinsOf(path) {
+		tools = append(tools, p.tool)
 	}
 	return tools
 }
@@ -252,6 +283,7 @@ func cmdEnable(args []string) int {
 		}
 		fmt.Printf("enabled %s\n", g)
 	}
+	warnConflicts(args)
 	if install {
 		cmd := exec.Command("mise", "install", "--yes")
 		cmd.Stdout = os.Stdout
@@ -263,6 +295,59 @@ func cmdEnable(args []string) int {
 		}
 	}
 	return 0
+}
+
+type groupPin struct {
+	group   string
+	version string
+}
+
+// warnConflicts reports, on stderr, each tool that enabled groups pin to
+// different versions. mise lets the file last in conf.d win, so the winner
+// is the last group in file-name order. A pair is reported only when one
+// side is in newly, because conflicts among groups that were already
+// enabled predate this call.
+func warnConflicts(newly []string) {
+	isNew := make(map[string]bool, len(newly))
+	for _, g := range newly {
+		isNew[g] = true
+	}
+
+	var enabled []string
+	for _, g := range allGroups() {
+		if isEnabled(g) {
+			enabled = append(enabled, g)
+		}
+	}
+	sort.Slice(enabled, func(i, j int) bool {
+		return enabled[i]+".toml" < enabled[j]+".toml"
+	})
+
+	pins := make(map[string][]groupPin)
+	for _, g := range enabled {
+		for _, p := range toolPinsOf(filepath.Join(groupsDir, g+".toml")) {
+			if p.version != "" {
+				pins[p.tool] = append(pins[p.tool], groupPin{group: g, version: p.version})
+			}
+		}
+	}
+
+	tools := make([]string, 0, len(pins))
+	for t := range pins {
+		tools = append(tools, t)
+	}
+	sort.Strings(tools)
+	for _, t := range tools {
+		ps := pins[t]
+		win := ps[len(ps)-1]
+		for _, p := range ps[:len(ps)-1] {
+			if p.version == win.version || (!isNew[p.group] && !isNew[win.group]) {
+				continue
+			}
+			fmt.Fprintf(os.Stderr, "warning: %s is pinned by %s (%s) and %s (%s); %s wins (last file in conf.d)\n",
+				t, p.group, p.version, win.group, win.version, win.group)
+		}
+	}
 }
 
 func cmdDisable(args []string) int {
