@@ -62,7 +62,7 @@ Group definitions can live in your dotfiles while the tool itself comes from thi
 
 The author's dotfiles are a working reference:
 
-- [Q0tzly/dotfiles](https://github.com/Q0tzly/dotfiles) — the group definitions live in [`mise/groups/`](https://github.com/Q0tzly/dotfiles/tree/main/mise/groups) (11 groups)
+- [Q0tzly/dotfiles](https://github.com/Q0tzly/dotfiles) — the group definitions live in [`config/mise/groups/`](https://github.com/Q0tzly/dotfiles/tree/main/config/mise/groups) (11 groups)
 - Those definitions are linked to `~/.config/mise/groups`
 - The dotfiles' base tools include `"github:Q0tzly/mise-group"`, so mise distributes the binary itself (on first-time setup only, install.sh borrows it ahead of time via `mise exec`)
 

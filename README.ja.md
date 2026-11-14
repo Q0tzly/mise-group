@@ -62,7 +62,7 @@ mise-group names                 # グループ名だけ（スクリプト用）
 
 実例として作者の dotfiles がそのまま参考になる：
 
-- [Q0tzly/dotfiles](https://github.com/Q0tzly/dotfiles) — グループ定義は [`mise/groups/`](https://github.com/Q0tzly/dotfiles/tree/main/mise/groups) に置いてある（11グループ）
+- [Q0tzly/dotfiles](https://github.com/Q0tzly/dotfiles) — グループ定義は [`config/mise/groups/`](https://github.com/Q0tzly/dotfiles/tree/main/config/mise/groups) に置いてある（11グループ）
 - その定義を `~/.config/mise/groups` にリンク
 - dotfiles の base ツールに `"github:Q0tzly/mise-group"` が入っていて、mise が本体を配る（初回構築時だけ install.sh が `mise exec` で先行して借りる）
 
